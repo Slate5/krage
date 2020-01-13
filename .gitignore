@@ -1,0 +1,5 @@
+# tests
+test*
+
+# terminal profile files
+ext/.*

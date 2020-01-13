@@ -1,0 +1,11 @@
+#!/bin/bash
+
+shopt -s nocasematch
+read -sn 10000 -t 0.01
+read -srN 1 input
+if [[ "$input" =~ [1-4sgqwe] ]]; then
+  echo -n "$input"
+elif [[ $(echo -e "$input" | od -t x | grep "1b") ]]; then
+  read -srt 0.0001 cursor
+  echo -n "$input$cursor"
+fi

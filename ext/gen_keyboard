@@ -1,0 +1,5 @@
+#!/bin/bash
+
+read -sn 1 escape
+read -st 0.001 key
+echo -n "$escape$key"
