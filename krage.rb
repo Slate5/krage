@@ -208,10 +208,11 @@ players.cycle do |player|
     when true, 'skip'
       player.show_current_land = false
       player.countdown = '' if Krage.class_variable_get(:@@game_with_timer)
+      player.spawn("paplay #{KRAGE_DIR}/data/skip.ogg") if button == 'skip'
       break
     when 'giveup'
-      player.spawn("paplay #{KRAGE_DIR}/data/giveup.ogg")
       player.show_current_land = false
+      player.spawn("paplay #{KRAGE_DIR}/data/giveup.ogg")
       player.giveup_cleaner
       players[players.index(player)] = nil
       ending(players.compact.last) if players.count(&:itself) < 2
