@@ -5,7 +5,7 @@ Krage is a terminal-based game for 2-4 players. There is a map and each player p
 
 ## Installation
 
-Game works on Ubuntu version 18/19:
+Game works on Ubuntu version 18/19 and ruby > 2.4:
 ```
 git clone https://github.com/Slate5/krage.git
 cd krage
@@ -20,9 +20,11 @@ cd
 ```
 ## Features
 
+- [x] 🔰 - Game style: start game from a corner
+- [x] ⚔️ - Game style: start game from the middle
 - [x] 🗺 - info: how many more fields you should own at the end of the round to be a winner
 - [x] 🃏 - info: how many fields you have to conquer to gain bonus joker
-- [x] ⌛ - earn this by being fast and get extra joker (5 needed)
+- [x] ⏳ - earn this by being fast and get extra joker (5 needed)
 - [x] 🎯 - try to place land on a map without mistake to gain these (5 needed for joker)
 - [ ] 📶 - play over wifi
 

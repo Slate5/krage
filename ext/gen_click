@@ -1,7 +1,7 @@
 #!/bin/bash
 
 shopt -s nocasematch
-read -sn 1000 -t 0.1
+read -sn 1000 -t 0.001
 read -srn 1 input
 if [[ "$input" =~ [1-4rsgqwe] ]]; then
   echo -n "$input"

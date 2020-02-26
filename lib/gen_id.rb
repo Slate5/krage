@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 ids_ar = ['1c1d6752-8d60-46c1-8e22-06566a269a01',
           '25f16397-5503-41b1-aa6c-3b2d8d7e6737',
           'ea2ace5b-35e8-4726-a20e-640d18dc8190',

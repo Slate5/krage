@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 require 'yaml'
 
 module Displayable
@@ -6,38 +7,39 @@ module Displayable
 
   @@map = Array.new(30) { Array.new(30) { '___' } }
 
+  @@game_timer = false
+  @@game_hard = false
+  HANDICAP = @game_hard ? 0.5 : 0.7
+
   @@p_info = {}
 
   @@music = true
   @@sfx = true
-
-  @@game_with_timer = true
-
-  @@stubs = { 2 => " \e[1;33mFields\e[32m🗺  ",
-              4 => " \e[1;33mPercent:\e[32m ",
-              6 => " \e[1;33mJokers\e[32m🃏 ",
-              8 => "  \e[1;35mROTATE\e[32m  ",
-              9 => "  \e[1;35mREROLL\e[32m  ",
-             10 => "  \e[1;35mEAT\e[32m     ",
-             12 => " \e[1;33mTimely:\e[32m  ",
-             13 => " \e[1;33mAccuracy:\e[32m"}
-
-  @@time_stubs = ->(n) { @@game_with_timer && [12,13,28,29].include?(n) }
-
   @@music_old = false
+  @@show_turn = true
+
+  @@stubs = { 2 => " \e[1;33mFields\e[34m🗺  ",
+              4 => " \e[1;33mPercent:\e[34m ",
+              6 => " \e[1;33mJokers\e[34m🃏 ",
+              8 => "  \e[1;35mROTATE\e[34m  ",
+              9 => "  \e[1;35mREROLL\e[34m  ",
+             10 => "  \e[1;35mEAT\e[34m     ",
+             12 => " \e[1;33mTimely:\e[34m  ",
+             13 => " \e[1;33mAccuracy:\e[34m"}
+
+  @@time_stubs = ->(n) { @@game_timer && [12,13,28,29].include?(n) }
+
   LOADING = %w(🕧 🕘 🕛 ⏸️\ )
   SPACE = ' '*18
   HID = "\e[8;0;8;1m"
-  UNUSABLE = "\e[45m"
+  B_W = "30;107m"
 
-  left_bird = File.read("#{KRAGE_DIR}/ext/left_bird.yaml")
-  @@left_bird = YAML.load(left_bird)
-
-  right_bird = File.read("#{KRAGE_DIR}/ext/right_bird.yaml")
-  @@right_bird = YAML.load(right_bird)
+  @@left_bird = YAML.load(File.read("#{KRAGE_DIR}/ext/left_bird.yaml"))
+  @@right_bird = YAML.load(File.read("#{KRAGE_DIR}/ext/right_bird.yaml"))
+  @@players_turn = YAML.load(File.read("#{KRAGE_DIR}/ext/players_turn.yaml"))
 
   def display(winer=nil)
-    @@display_str = ''
+    @@display_str = +''
     @land_rows_num = y_len
     if @@music != @@music_old
       @@music_old = @@music
@@ -77,24 +79,24 @@ module Displayable
       @@display_str << row
     end
     print `tput cup 0 0` + @@display_str
-    timer_countdown if @timer_on && show_current_land
+    show_player_turn if @@show_turn
   end
 
   def map_row_each
     @@map.each_with_index do |row, num|
       case num
-      when 0 then map_row(row, 1, 3, 0)
-      when 2, 4, 6 then map_row(row, 1, 3, num/2, @@stubs[num])
-      when 8, 9, 10 then map_row(row, 1, 3, num-4, @@stubs[num])
-      when 16 then map_row(row, 4, 2, 0)
-      when 18, 20, 22 then map_row(row, 4, 2, num/2-8, @@stubs[num-16])
-      when 24, 25, 26 then map_row(row, 4, 2, num-20, @@stubs[num-16])
+      when 0 then map_row(row, 1, 2, 0)
+      when 2, 4, 6 then map_row(row, 1, 2, num/2, @@stubs[num])
+      when 8, 9, 10 then map_row(row, 1, 2, num-4, @@stubs[num])
+      when 16 then map_row(row, 3, 4, 0)
+      when 18, 20, 22 then map_row(row, 3, 4, num/2-8, @@stubs[num-16])
+      when 24, 25, 26 then map_row(row, 3, 4, num-20, @@stubs[num-16])
       when @@time_stubs
         case num
         when 12, 13
-          map_row(row, 1, 3, num-5, @@stubs[num])
+          map_row(row, 1, 2, num-5, @@stubs[num])
         when 28, 29
-          map_row(row, 4, 2, num-21, @@stubs[num-16])
+          map_row(row, 3, 4, num-21, @@stubs[num-16])
         end
       else map_row(row)
       end
@@ -128,22 +130,21 @@ module Displayable
   end
 
   def buttons(side)
-    use = 1
-    j1 = joker_num[0].zero? ? HID : ''
-    j2 = joker_num[1].zero? ? HID : ''
-    j3 = joker_num[2].zero? ? HID : ''
+    available1 = "\e[45m" if show_current_land
+    available2 = "\e[45m" unless show_current_land
+    j1 = joker_num[0].zero? ? HID : available2
+    j2 = joker_num[1].zero? ? HID : available2
+    j3 = joker_num[2].zero? ? HID : available2
+    j3 = "\e[45m" if @@game_hard && round < 4
     info = if round < 1
              'First roll will place a land in your corner'\
              " of the map, ROLL #{color.call(name)}!"
            elsif show_current_land
-             use = 0
              "Now #{color.call(name)}, place your "\
              'land on the map or use joker if any!'
            else
              "It is your turn #{color.call(name)}, ROLL!"
            end
-    available1 = UNUSABLE * (use-1).abs
-    available2 = UNUSABLE * use
     left_buttons = ["#{available1}|      |\e[0m|",
                     "#{available1}| ROLL |\e[0m|",
                     "#{available1}|      |\e[0m|",
@@ -156,12 +157,12 @@ module Displayable
                     "INFO: \e[1;35m#{@img_info||info} \e[30m==".center(137,'='),
                     '']
 
-    right_buttons = ["\e[30;107m#{j1}    \e[7m#{j1}    ",
-                     "\e[30;107m#{j1} ROT\e[7m#{j1}ATE ",
-                     "\e[30;107m#{j1}    \e[7m#{j1}    ",
-                     "#{' '*10}\e[97;40m#{j2} 🎲  ➡  ",
-                     "#{' '*10}\e[30;107m#{j2} 🎲  ⬆➡ ",
-                     "#{' '*10}\e[97;40m#{j2} 🎲  ⬆  ",
+    right_buttons = ["\e[#{B_W}#{j1}    \e[7m#{j1}    ",
+                     "\e[#{B_W}#{j1} ROT\e[7m#{j1}ATE ",
+                     "\e[#{B_W}#{j1}    \e[7m#{j1}    ",
+                     "#{' '*10}\e[7;#{B_W}#{j2} 🎲  ➡  ",
+                     "#{' '*10}\e[#{B_W}#{j2} 🎲  ⬆➡ ",
+                     "#{' '*10}\e[7;#{B_W}#{j2} 🎲  ⬆  ",
                      "#{' '*20}\e[40m#{j3}        ",
                      "#{' '*20}\e[1;31;40m#{j3}  EAT!  ",
                      "\e[40m#{j3}        ", '', '']
@@ -170,9 +171,9 @@ module Displayable
   end
 
   def current_land_rows
-    timer = @@game_with_timer ? display_timer : ' '*42
+    timer = @@game_timer ? display_timer : ' '*42
     if show_current_land
-      nums = "\e[33m"
+      nums = +"\e[33m"
       x_len.times { |n| nums << " #{n+1}  " }
       land_num = nums.center(47)
     else
@@ -185,23 +186,23 @@ module Displayable
   end
 
   def current_land_row
-    cur_row = "\e[33m#{y_len-@land_rows_num}\e[0m"
+    cur_row = +"\e[33m#{y_len-@land_rows_num}\e[0m"
     cur_row << case @direction
                when '1'
                  show_direction_point(0, (y_len-1))
                when '2'
-                 show_direction_point((x_len-1), 0)
-               when '3'
                  show_direction_point((x_len-1), (y_len-1))
-               when '4'
+               when '3'
                  show_direction_point(0, 0)
+               when '4'
+                 show_direction_point((x_len-1), 0)
                end
     cur_row << '| '
   end
 
-  def show_direction_point(x,y)
+  def show_direction_point(x, y)
     return "|#{color.call}" if x_len == 1 && y_len == 1
-    cur_row = ''
+    cur_row = +''
     x_len.times do |c|
       cur_row << if c == x && @land_rows_num == y
                    "|\e[44m___\e[49m"
@@ -209,11 +210,11 @@ module Displayable
                    if c.zero? && @land_rows_num == (y_len-1)
                      "|#{color.call('_1_')}"
                    elsif c == (x_len-1) && @land_rows_num.zero?
-                     "|#{color.call('_2_')}"
-                   elsif c == (x_len-1) && @land_rows_num == (y_len-1)
-                     "|#{color.call('_3_')}"
-                   elsif c.zero? && @land_rows_num.zero?
                      "|#{color.call('_4_')}"
+                   elsif c == (x_len-1) && @land_rows_num == (y_len-1)
+                     "|#{color.call('_2_')}"
+                   elsif c.zero? && @land_rows_num.zero?
+                     "|#{color.call('_3_')}"
                    else
                      "|#{color.call}"
                    end
@@ -225,12 +226,11 @@ module Displayable
   def display_timer
     green = 180
     red = 7
-    timer_str = '   ⏳'
+    timer_str = +'   ⏳'
     31.times do |t|
       if @countdown&.size&.<= t
         timer_str << "\e[48;2;#{red};#{green};0m "
-      else
-        timer_str << ' '
+      else timer_str << ' '
       end
       green -= 5
       red += 8
@@ -238,17 +238,12 @@ module Displayable
     timer_str << "\e[0m⌛    "
   end
 
-  def timer_countdown
-    @timer_on = false
-    counter = Thread.new { loop { @countdown += ' '; sleep 0.14 } }
-
-    Thread.new do
-      until @countdown.size >= 31
-        break unless show_current_land
-        print `tput cup 33 64` + @countdown
-      end
-      Thread.kill(counter)
-      `pkill -f 'paplay.*countdown'`
+  def show_player_turn
+    @@show_turn = false
+    print "\e[#{color.call[2..3].to_i-10}m"
+    8.times do |t|
+      print "#{`tput cup #{34+t} 60`}#{@@players_turn[0][t]}"\
+            "#{@@players_turn[p_num][t]}"
     end
   end
 

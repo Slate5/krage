@@ -1,5 +1,6 @@
 # tests
 test*
+.dc
 
 # terminal profile files
 ext/.*
