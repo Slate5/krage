@@ -1,6 +1,6 @@
 #!/bin/bash
 
-KRAGE_DIR=$(readlink -f /usr/local/games/krage | sed 's/bin\/krage//')
+KRAGE_DIR=$(readlink -fn /usr/local/games/krage | sed 's/bin\/krage//')
 
 paplay "$KRAGE_DIR"data/echo.ogg &
 

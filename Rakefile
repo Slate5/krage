@@ -3,8 +3,9 @@ desc 'Install Krage'
 task default: [:install]
 
 task :configure do
+  puts 'Configuring...'
   home = `echo -n $HOME`
-  @krage_dir = File.dirname(__FILE__)
+  @krage_dir = File.expand_path("#{File.dirname(__FILE__)}")
   @app_icon_dir = "#{home}/.local/share/icons/"
   @app_desktop_dir = "#{home}/.local/share/applications/"
   chmod 0755, "#{@krage_dir}/bin/krage"
@@ -13,6 +14,13 @@ end
 
 task :clean => [:configure] do
   puts 'Cleaning...'
+  old_krage_chk = `readlink -fn /usr/local/games/krage`.sub(/\/bin\/krage/, '')
+  if old_krage_chk != '/usr/local/games/krage' && @krage_dir != old_krage_chk
+    Dir.chdir(old_krage_chk) do
+      system('rake uninstall')
+    end
+    next
+  end
   `sudo rm -f /usr/local/games/krage`
   rm_f("#{@app_desktop_dir}krage.desktop")
   rm_f("#{@app_icon_dir}krage_crow.png")
@@ -34,7 +42,7 @@ end
 desc 'Uninstall Krage'
 task :uninstall => [:clean] do
   puts 'Uninstalling Krage...'
-  rm_rf("#{@krage_dir}")
+  rm_rf(@krage_dir)
 end
 
 task :install => [:clean] do
