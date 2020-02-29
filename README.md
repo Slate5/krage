@@ -1,16 +1,24 @@
 # Krage
+
 Krage is a terminal-based game for 2-4 players. There is a map and each player place land on the map next to his owned field. The dominant player is the winner, moreover, the winner becomes The Mighty Krage King!
 
 ![https://raw.githubusercontent.com/Slate5/krage/master/data/krage.gif](https://raw.githubusercontent.com/Slate5/krage/master/data/krage.gif)
 
 ## Installation
 
-Game works on Ubuntu version 18/19 and ruby > 2.4:
+Game works on Ubuntu version 18/19 and ruby > 2.4 (ruby from snap have permission issue so use RVM, apt, etc.):
 ```
 git clone https://github.com/Slate5/krage.git
 cd krage
 rake
 ```
+## Play
+
+Start the game from the desktop application or run the command from a terminal:
+```
+krage
+```
+
 ## Uninstallation
 
 From Krage directory:
@@ -18,11 +26,12 @@ From Krage directory:
 rake uninstall
 cd
 ```
+
 ## Features
 
 - [x] 🔰 - Game style: start game from a corner
 - [x] ⚔️ - Game style: start game from the middle
-- [x] 🗺 - info: how many more fields you should own at the end of the round to be a winner
+- [x] 🗺 - info: how many more fields player have to own at the end of this round to be a winner
 - [x] 🃏 - info: how many fields you have to conquer to gain bonus joker
 - [x] ⏳ - earn this by being fast and get extra joker (5 needed)
 - [x] 🎯 - try to place land on a map without mistake to gain these (5 needed for joker)
