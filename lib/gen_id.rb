@@ -13,18 +13,18 @@ profile = File.read("#{File.dirname(__dir__)}/ext/.user_profile.dconf")
 profile.gsub(/(\w+-){4}\w+/) { |m| current_ids << m }
 current_ids.uniq!
 
-profile_id = nil
+krage_id = nil
 ids_ar.each do |id1|
-  current_ids.each_with_index do |id2,idx|
+  current_ids.each do |id2|
     if id1 == id2
       break
-    elsif (idx+1) == current_ids.length
-      profile_id = id1
+    elsif id2 == current_ids.last
+      krage_id = id1
     end
   end
-  break if profile_id
+  break if krage_id
 end
 
-profile_id ||= ids_ar[0]
+krage_id ||= ids_ar[0]
 
-print profile_id
+print krage_id

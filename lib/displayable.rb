@@ -9,14 +9,16 @@ module Displayable
 
   @@game_timer = false
   @@game_hard = false
-  HANDICAP = @game_hard ? 0.5 : 0.7
+  HANDICAP = @game_hard ? 0.35 : 0.7
 
   @@p_info = {}
 
-  @@music = true
-  @@sfx = true
+  SILENT = `ps -x | grep '[p]aplay.*echo.ogg'`.empty?
+  @@music = @@sfx = SILENT ? false : true
+  @@music_icon = '⏸️ ' if SILENT
   @@music_old = false
   @@show_turn = true
+  @@img_info = nil
 
   @@stubs = { 2 => " \e[1;33mFields\e[34m🗺  ",
               4 => " \e[1;33mPercent:\e[34m ",
@@ -47,7 +49,7 @@ module Displayable
       unless @@music
         Thread.new do
           LOADING.each do |icon|
-            4.times { sleep 0.12; Thread.exit if @@music }
+            4.times { sleep 0.128; Thread.exit if @@music }
             @@music_icon = icon
             print `tput cup 0 151` + icon
           end
@@ -130,8 +132,7 @@ module Displayable
   end
 
   def buttons(side)
-    available1 = "\e[45m" if show_current_land
-    available2 = "\e[45m" unless show_current_land
+    show_current_land ? available1 = "\e[45m" : available2 = "\e[45m"
     j1 = joker_num[0].zero? ? HID : available2
     j2 = joker_num[1].zero? ? HID : available2
     j3 = joker_num[2].zero? ? HID : available2
@@ -154,7 +155,7 @@ module Displayable
                     "#{available2}        \e[0m#{' '*21}",
                     "#{available2} GIVEUP \e[0m#{' '*21}",
                     "#{available2}        \e[0m#{' '*83}",
-                    "INFO: \e[1;35m#{@img_info||info} \e[30m==".center(137,'='),
+                    "INFO: \e[1;35m#{@@img_info||info} \e[30m==".center(137,'='),
                     '']
 
     right_buttons = ["\e[#{B_W}#{j1}    \e[7m#{j1}    ",

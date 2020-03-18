@@ -6,26 +6,21 @@ Krage is a terminal-based game for 2-4 players. There is a map and each player p
 
 ## Installation
 
-Game works on Ubuntu version 18/19 and ruby > 2.4 (ruby from snap have permission issue so use RVM, apt, etc.):
+The game works on Ubuntu version 18/19 and ruby > 2.4 (ruby from snap on Ubuntu 19.10 have permission issue so use RVM, apt, etc. or run `krage -s` to avoid error messages):
 ```
 git clone https://github.com/Slate5/krage.git
-cd krage
-rake
+cd krage && rake
 ```
 ## Play
 
 Start the game from the desktop application or run the command from a terminal:
-```
-krage
-```
+<br/><br/>`krage [-s]`<br/><br/>
+For silent game use flag "-s".\
+The first start takes up to a few seconds to adjust the screen and other settings.
 
 ## Uninstallation
 
-From Krage directory:
-```
-rake uninstall
-cd
-```
+From Krage directory: `rake uninstall && cd`
 
 ## Features
 

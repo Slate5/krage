@@ -7,7 +7,6 @@ class Krage
 
   @@objects_num = 0
   @@img_thread_num = 0
-  @@map_params = proc { |n| n.between?(0, 29) }
 
   attr_accessor :coords, :joker_num, :show_current_land, :countdown
   attr_reader :name, :p_num, :round, :color, :x_len, :y_len
@@ -27,22 +26,19 @@ class Krage
              when 4 then proc { |c='___'| "\e[47m#{c}\e[49m" }
              end
     @@p_info[p_num] = [color.call("\e[25m#{name}".center(23)), '0']
-    @@p_info[p_num] += ['0 ％', '3', '1', '1', '1', '', '','Rotate']
+    @@p_info[p_num] += ['0 ％', '3', '1', '1', '1', '', '', 'Rotate']
   end
 
   def generate_coords
     display
-    self.coords = nil
     print "\e[?1000h"
     click = `#{KRAGE_DIR}/ext/gen_click 2> /dev/null`
     print "\e[?1000l"
     if click.size == 1
-      @img_info = nil if click =~ /(s|g)/
-      case click = click.downcase
-      when 'r' then 'roll'
-      when 's' then 'skip'
-      when 'g' then 'giveup'
-      when /[qwe]/ then click
+      click.downcase!
+      @@img_info &&= nil if click =~ /(s|g)/
+      case click
+      when /[rqwesg]/ then click
       when /[1-4]/
         if show_current_land
           spawn("paplay #{KRAGE_DIR}/data/direction.ogg")
@@ -56,14 +52,18 @@ class Krage
         if x.between?(188, 191)
           exit
         elsif x.between?(184, 185)
-          `pkill -STOP -f 'paplay.*krage_' &` if @@music
-          `pkill -CONT -f 'paplay.*krage_'` unless @@music
           @@music = !@@music
+          if @@music then `pkill -CONT -f 'paplay.*krage_'`
+          else `pkill -STOP -f 'paplay.*krage_' &`
+          end
+          return
         elsif x.between?(180, 181)
           @@sfx = !@@sfx
+          return
         end
       elsif x.between?(53, 172) && y.between?(35, 64)
-        x, y = map_coords(x, y)
+        @@img_info &&= nil
+        return self.coords = map_coords(x, y)
       end
       self.coords = x, y
       coords_to_button
@@ -88,7 +88,7 @@ class Krage
 
     if @@game_timer && round > 1
       spawn("paplay #{KRAGE_DIR}/data/countdown.ogg")
-      @start_timer = Time.now
+      @timer_start = Time.now
       timer_countdown
       @accuracy = true
     else
@@ -109,11 +109,10 @@ class Krage
   end
 
   def choose_place
-    return unless coords&.all?(&@@map_params)
     fill_direction
     if place_check?
       land_assigner
-      @eater = false if @eater
+      @eater &&= false
       if @@game_timer
         timer
         accurate if @accuracy
@@ -196,26 +195,26 @@ class Krage
 
   def coords_to_button
     if buttons_params?(83, 66)
-      'roll'
+      'r'
     elsif buttons_params?(134, 66)
       'q'
     elsif buttons_params?(144, 69)
       'w'
     elsif buttons_params?(154, 72)
       'e'
-    elsif round > 0 && @img_info = img_params
+    elsif round > 0 && @@img_info = img_params
       @@img_thread_num += 1
       Thread.new do
         old_num = @@img_thread_num
         sleep 3
-        Thread.exit if @img_info.nil? || old_num != @@img_thread_num
-        @img_info = nil
+        Thread.exit if @@img_info.nil? || old_num != @@img_thread_num
+        @@img_info = nil
         display
       end
     elsif buttons_params?(73, 69)
-      'skip'
+      's'
     elsif buttons_params?(63, 72)
-      'giveup'
+      'g'
     end
   end
 
@@ -228,8 +227,9 @@ class Krage
         print `tput cup 33 64` + countdown
       end
       Thread.kill(counter)
-      @countdown = '' unless show_current_land
-      print `tput cup 33 64` + countdown
+      if show_current_land then print `tput cup 33 64` + countdown
+      elsif !countdown.empty? then @countdown = ''
+      end
       `pkill -f 'paplay.*countdown'`
     end
   end
@@ -297,8 +297,8 @@ class Krage
   end
 
   def wrong_place_assigner
-    spawn("paplay #{KRAGE_DIR}/data/wrong.ogg") if [@x, @y].all?(&@@map_params)
-    while [@x, @y].all?(&@@map_params)
+    spawn("paplay #{KRAGE_DIR}/data/wrong.ogg")
+    while [@x, @y].all? { |n| n.between?(0, 29) }
       x, y = coords
       mark = place_check? ? '✔' : 'X'
       y_len.times do |row|
@@ -315,9 +315,9 @@ class Krage
         cursor = `#{KRAGE_DIR}/ext/gen_cursor 2>/dev/null`
         print "\e[?1003l"
         if cursor.size == 1
-          case cursor = cursor.downcase
-          when 's' then return 'skip'
-          when 'g' then return 'giveup'
+          cursor.downcase!
+          case cursor
+          when 's', 'g' then return cursor
           when /[qwe]/ then break jokers(cursor)
           when /[1-4]/
             spawn("paplay #{KRAGE_DIR}/data/direction.ogg")
@@ -348,7 +348,7 @@ class Krage
   end
 
   def timer
-    time = Time.now - @start_timer
+    time = Time.now - @timer_start
     @joker_time += 1 if time < 4.4
     if @joker_time > 4
       spawn("paplay #{KRAGE_DIR}/data/jsmile.ogg")
@@ -422,7 +422,7 @@ class Krage
 
     if player
       player_name = @@p_info[player][0].gsub(/( .+25m| +)/, '')
-      return "No more jokers #{player_name}, enough is enough!" unless fields
+      return "No more jokers for #{player_name}, enough is enough!" unless fields
       "#{player_name} have to conquer #{fields} "\
       "fields more to gain joker #{next_jbonus}."
     else fields

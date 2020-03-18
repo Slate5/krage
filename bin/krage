@@ -1,32 +1,32 @@
 #!/bin/bash
 
-KRAGE_DIR=$(readlink -fn /usr/local/games/krage | sed 's/bin\/krage//')
+readonly krage_dir=$(readlink -fn /usr/local/games/krage | sed 's/bin\/krage//')
 
-paplay "$KRAGE_DIR"data/echo.ogg &
+[ "$1" != -s ] && paplay "$krage_dir"data/echo.ogg &
 
 krage_chk=$(dconf dump /org/gnome/terminal/legacy/profiles:/ | grep 'krage')
 
 if [ -z "$krage_chk" ]; then
   list_chk=$(dconf dump /org/gnome/terminal/legacy/profiles:/ | grep 'list')
-  dconf dump /org/gnome/terminal/legacy/profiles:/ > "$KRAGE_DIR"ext/.user_profile.dconf
-  krage_id=$(ruby "$KRAGE_DIR"lib/gen_id.rb)
-  echo -n "$krage_id" > "$KRAGE_DIR"ext/.current_krage_id
+  dconf dump /org/gnome/terminal/legacy/profiles:/ > "$krage_dir"ext/.user_profile.dconf
+  krage_id=$(ruby "$krage_dir"lib/gen_id.rb)
+  echo -n "$krage_id" > "$krage_dir"ext/.current_krage_id
   if [ -n "$list_chk" ]; then
-    cat "$KRAGE_DIR"ext/.user_profile.dconf > "$KRAGE_DIR"ext/.mix_profile.dconf
-    sed -Ei "s/list=\[('(\w*-){4}\w*')/list=[\1, '$krage_id'/" "$KRAGE_DIR"ext/.mix_profile.dconf
-    echo -e "\n[:$krage_id]" >> "$KRAGE_DIR"ext/.mix_profile.dconf
+    cat "$krage_dir"ext/.user_profile.dconf > "$krage_dir"ext/.mix_profile.dconf
+    sed -Ei "s/list=\[('(\w*-){4}\w*')/list=[\1, '$krage_id'/" "$krage_dir"ext/.mix_profile.dconf
+    echo -e "\n[:$krage_id]" >> "$krage_dir"ext/.mix_profile.dconf
   elif [ -z "$list_chk" ]; then
-    profile_id=$(grep -oEm 1 "(\w*-){4}\w*" "$KRAGE_DIR"ext/.user_profile.dconf)
-    if [ -z "$profile_id" ]; then profile_id="b1dcc9dd-5262-4d8d-a863-c897e6d979b9"; fi
-    echo "[/]" > "$KRAGE_DIR"ext/.mix_profile.dconf
-    echo -e "list=['$profile_id', '$krage_id']\n" >> "$KRAGE_DIR"ext/.mix_profile.dconf
-    cat "$KRAGE_DIR"ext/.user_profile.dconf >> "$KRAGE_DIR"ext/.mix_profile.dconf
-    echo -e "\n[:$krage_id]" >> "$KRAGE_DIR"ext/.mix_profile.dconf
+    user_profile_id=$(grep -oEm 1 "(\w*-){4}\w*" "$krage_dir"ext/.user_profile.dconf)
+    if [ -z "$user_profile_id" ]; then user_profile_id="b1dcc9dd-5262-4d8d-a863-c897e6d979b9"; fi
+    echo "[/]" > "$krage_dir"ext/.mix_profile.dconf
+    echo -e "list=['$user_profile_id', '$krage_id']\n" >> "$krage_dir"ext/.mix_profile.dconf
+    cat "$krage_dir"ext/.user_profile.dconf >> "$krage_dir"ext/.mix_profile.dconf
+    echo -e "\n[:$krage_id]" >> "$krage_dir"ext/.mix_profile.dconf
   fi
   rezolution=$(xrandr | grep ' connected' | grep -oE "[0-9]+x[0-9]+" | sort -g | tail -1 | grep -oE "[0-9]+" | tail -1)
   font=$( ruby -e "print $rezolution / 69.9" )
-  sed "s/ 15.25/ $font/" "$KRAGE_DIR"ext/krage_profile.dconf >> "$KRAGE_DIR"ext/.mix_profile.dconf
-  dconf load /org/gnome/terminal/legacy/profiles:/ < "$KRAGE_DIR"ext/.mix_profile.dconf
+  sed "s/ 15.25/ $font/" "$krage_dir"ext/krage_profile.dconf >> "$krage_dir"ext/.mix_profile.dconf
+  dconf load /org/gnome/terminal/legacy/profiles:/ < "$krage_dir"ext/.mix_profile.dconf
 fi
 
-gnome-terminal --title=Krage --full-screen --hide-menubar --window-with-profile=krage -- ruby "$KRAGE_DIR"krage.rb &> /dev/null
+gnome-terminal --title=Krage --full-screen --hide-menubar --window-with-profile=krage -- ruby "$krage_dir"krage.rb &> /dev/null
