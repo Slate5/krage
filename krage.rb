@@ -9,6 +9,7 @@ $LOAD_PATH.unshift(File.expand_path('lib', __dir__))
 require 'krage_class'
 
 KRAGE_DIR = Displayable::KRAGE_DIR
+STTY_STATE = `stty -g`
 
 krage_profile_id = File.read("#{KRAGE_DIR}/ext/.current_krage_id")
 font = `dconf read /org/gnome/terminal/legacy/profiles:/:#{krage_profile_id}/font\
@@ -104,6 +105,7 @@ def ending(player)
     when ''
       `pkill -f 'paplay.*king.ogg'`
       if ENDING_CHOICE[0][7] == '⮕'
+        `stty #{STTY_STATE}`
         player.spawn("paplay --volume=0 #{KRAGE_DIR}/data/echo.ogg")
         print "\ec"
         exec("ruby #{KRAGE_DIR}/krage.rb")
@@ -186,15 +188,11 @@ end
 players = [player1, player2, player3, player4].compact
 score = {}
 
-print "\e[?9h"
-print "\e[?7l"
-`stty -echo`
-save_state = `stty -g`
-`stty raw`
+print "\e[?1000h"
+`stty -echo -icanon -icrnl`
 print "\n\n" * (4 - players.size)
 print "\n#{space}\e[0mIacta alea est"
 5.times { print '!'; sleep 0.2 }
-`stty #{save_state}`
 
 players.cycle do |player|
   next unless player

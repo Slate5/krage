@@ -31,9 +31,7 @@ class Krage
 
   def generate_coords
     display
-    print "\e[?1000h"
     click = `#{KRAGE_DIR}/ext/gen_click 2> /dev/null`
-    print "\e[?1000l"
     if click.size == 1
       click.downcase!
       @@img_info &&= nil if click =~ /(s|g)/
@@ -312,8 +310,9 @@ class Krage
       x, y = @x, @y
       until [@x, @y] != [x, y]
         print "\e[?1003h"
-        cursor = `#{KRAGE_DIR}/ext/gen_cursor 2>/dev/null`
+        cursor = STDIN.getc
         print "\e[?1003l"
+        cursor = STDIN.read_nonblock(5) if cursor == "\e"
         if cursor.size == 1
           cursor.downcase!
           case cursor
@@ -323,12 +322,11 @@ class Krage
             spawn("paplay #{KRAGE_DIR}/data/direction.ogg")
             break @direction = cursor
           end
-        elsif cursor.size == 6
-          redo unless cursor[0] == "\e"
-          x = cursor[4].getbyte(0)
-          y = cursor[5].getbyte(0)
+        elsif cursor.size == 5
+          x = cursor[3].getbyte(0)
+          y = cursor[4].getbyte(0)
           x, y = map_coords(x, y)
-          if cursor[3] == '#'
+          if cursor[2] == '#'
             self.coords = x, y
             return choose_place
           end
