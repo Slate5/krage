@@ -2,16 +2,21 @@
 
 shopt -s nocasematch
 read -sn 10000 -t 0.1
+
 read -srn 1 input
-if [[ "$input" =~ [1-4rsgqwe] ]]; then
+if [[ "$input" =~ ^[1-4rsgqwe]$ ]]; then
   echo -n "$input"
 elif [[ $(echo -e "$input" | od -t x | grep "1b") ]]; then
-  read -srn 6 input
-  if [[ "${input:5}" =~ [1-4rsgqwe] ]]; then
-    echo -n "${input:5}"
-  else
-    read -sd M -t 0.001
-    read -srn 3 -t 0.001 click
-    echo -n "${click:(-2)}"
+  read -srt 0.001 input
+  if [[ "${input:2:1}" == "#" ]]; then
+    echo -n "${input:3:2}"
+  elif [[ "${input:2:1}" == " " ]]; then
+    read -srn 1 input
+    if [[ "$input" =~ ^[1-4rsgqwe]$ ]]; then
+      echo -n "$input"
+    elif [[ $(echo -e "$input" | od -t x | grep "1b") ]]; then
+      read -srt 0.001 input
+      echo -n "${input:(-2)}"
+    fi
   fi
 fi
