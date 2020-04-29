@@ -5,7 +5,7 @@ task default: [:install]
 task :configure do
   puts 'Configuring...'
   home = `echo -n $HOME`
-  @krage_dir = File.expand_path("#{File.dirname(__FILE__)}")
+  @krage_dir = File.expand_path(__dir__)
   @app_icon_dir = "#{home}/.local/share/icons/"
   @app_desktop_dir = "#{home}/.local/share/applications/"
   chmod 0755, "#{@krage_dir}/bin/krage"
@@ -14,9 +14,9 @@ end
 
 task :clean => [:configure] do
   puts 'Cleaning...'
-  old_krage_chk = `readlink -fn /usr/local/games/krage`.sub(/\/bin\/krage/, '')
-  if old_krage_chk != '/usr/local/games/krage' && @krage_dir != old_krage_chk
-    Dir.chdir(old_krage_chk) do
+  old_krage_path = `readlink -fn /usr/local/games/krage`.sub(/\/bin\/krage/, '')
+  if old_krage_path != '/usr/local/games/krage' && @krage_dir != old_krage_path
+    Dir.chdir(old_krage_path) do
       system('rake uninstall')
     end
     next
