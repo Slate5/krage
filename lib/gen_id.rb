@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 ids_ar = ['1c1d6752-8d60-46c1-8e22-06566a269a01',
           '25f16397-5503-41b1-aa6c-3b2d8d7e6737',
           'ea2ace5b-35e8-4726-a20e-640d18dc8190',
@@ -16,11 +17,8 @@ current_ids.uniq!
 krage_id = nil
 ids_ar.each do |id1|
   current_ids.each do |id2|
-    if id1 == id2
-      break
-    elsif id2 == current_ids.last
-      krage_id = id1
-    end
+    break if id1 == id2
+    krage_id = id1 if id2 == current_ids.last
   end
   break if krage_id
 end
