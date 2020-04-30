@@ -46,9 +46,10 @@ WE = krage_win_active ? (columns-159) / 2 : 0
 
 spawn("paplay #{KRAGE_DIR}/data/welcome.ogg") unless SILENT
 
-music = ['krage_slavic.ogg', 'krage_western.ogg', 'krage_viking.ogg']
+music = ['krage_slavic.ogg', 'krage_western.ogg',
+         'krage_viking.ogg', 'krage_indigenous.ogg']
 
-spawn("paplay #{KRAGE_DIR}/data/#{music[rand(3)]}")
+spawn("paplay #{KRAGE_DIR}/data/#{music[rand(4)]}")
 `pkill -STOP -f 'paplay.*krage_' &` if SILENT
 
 at_exit do
@@ -63,7 +64,7 @@ end
 
 def intro
   print `clear; tput cup #{NS+1} #{WE}`
-  puts 'Welcome to The Mighty Krage'.center(161)
+  puts 'Welcome to The Mighty Krage'.rjust(94)
   print "\n\n\e[30m#{Displayable.indent(CROW)}\e[0m\n\n"
 end
 
@@ -101,8 +102,8 @@ def ending(player)
   player.spawn("paplay #{KRAGE_DIR}/data/king.ogg")
   player.display('winer')
   puts "\n\n\n"
-  puts "\e[4;34mWe have a Krage King, behold almighty "\
-       "#{player.color.call(player.name.upcase)}!!!\e[0;1m\n\n".center(188+WE*2)
+  puts "\e[3;9#{player.p_num}mWe have a Krage King, behold almighty "\
+       "#{player.name.upcase}!!!\e[0;1m\n\n".center(175+WE*2)
   loop do
     print `tput cup #{39+NS}`
     options_writer(ENDING_CHOICE)
