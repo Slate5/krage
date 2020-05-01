@@ -15,17 +15,23 @@ end
 task :clean => [:configure] do
   puts 'Cleaning...'
   old_krage_path = `readlink -fn /usr/local/games/krage`.sub(/\/bin\/krage/, '')
-  if old_krage_path != '/usr/local/games/krage' && @krage_dir != old_krage_path
+  unless ['', '/usr/local/games/krage', @krage_dir].any?(old_krage_path)
+    puts "\e[4mRemoving previous Krage installation\e[24m: "
     Dir.chdir(old_krage_path) do
       system('rake uninstall')
     end
+    puts "\e[4mPrevious Krage installation removed\e[24m"
     next
   end
   `sudo rm -f /usr/local/games/krage`
   rm_f("#{@app_desktop_dir}krage.desktop")
   rm_f("#{@app_icon_dir}krage_crow.png")
   unless `dconf dump /org/gnome/terminal/legacy/profiles:/ | grep 'krage'`.empty?
-    krage_profile_id = File.read("#{@krage_dir}/ext/.current_krage_id")
+    begin
+      krage_profile_id = File.read("#{@krage_dir}/ext/.current_krage_id")  
+    rescue Exception => e
+      abort("#{e}:\n\e[4mDelete terminal's profile \"krage\" manually and rerun rake\e[24m")
+    end
 
     `dconf reset -f /org/gnome/terminal/legacy/profiles:/:#{krage_profile_id}/`
 
