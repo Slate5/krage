@@ -12,6 +12,13 @@ class Krage
   attr_accessor :coords, :joker_num, :show_current_land, :eater, :countdown
   attr_reader :name, :p_num, :round, :color, :x_len, :y_len
 
+  def self.create_new_player
+    name = gets.chomp.gsub(/[\e\t]/, '')[0..13]
+    spawn("paplay #{KRAGE_DIR}/data/thunder.ogg") unless SILENT
+    name = 'Anonymous' if name.empty?
+    Krage.new(name)
+  end
+
   def initialize(player)
     @name = player[0].capitalize + player[1..-1]
     @@objects_num += 1
@@ -207,13 +214,13 @@ class Krage
     counter = Thread.new { loop { @countdown += ' '; sleep 0.14 } }
 
     Thread.new do
-      rc = "#{33+NS} #{64+WE}"
+      row_col = "#{33+NS} #{64+WE}"
       until countdown.size > 30
         break unless show_current_land
-        print `tput cup #{rc}` + countdown
+        print `tput cup #{row_col}` + countdown
       end
       Thread.kill(counter)
-      if show_current_land then print `tput cup #{rc}` + countdown
+      if show_current_land then print `tput cup #{row_col}` + countdown
       elsif !countdown.empty? then @countdown = ''
       end
       `pkill -f 'paplay.*countdown'`
@@ -430,12 +437,12 @@ class Krage
       break if second_strongest + fields_left < strongest + fields
       fields += 1
     end
-    if fields.zero? && player != p_num
+    if fields == 0 && player != p_num
       "Do something or #{player_name} will be crowned after this round!"
     elsif fields > empty_spaces
       "Unfortunately, #{player_name} is probably not destined to rule!"
     else
-      return "You, #{player_name}, could become the king soon!" if fields.zero?
+      return "You, #{player_name}, could become the king soon!" if fields == 0
       "If #{player_name} conquers #{fields} fields in "\
       'this round, he/she could become the Krage King.'
     end

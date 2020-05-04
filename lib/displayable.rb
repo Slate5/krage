@@ -33,8 +33,37 @@ module Displayable
   @@right_bird = YAML.load(File.read("#{KRAGE_DIR}/ext/right_bird.yaml"))
   @@players_turn = YAML.load(File.read("#{KRAGE_DIR}/ext/players_turn.yaml"))
 
+  def self.intro
+    print `clear; tput cup #{NS+1} #{WE}`
+    puts 'Welcome to The Mighty Krage'.rjust(94)
+    print "\n\n\e[30m#{indent(CROW)}\e[0m\n\n"
+  end
+
   def self.indent(string=@@display_str)
-    WE.zero? ? string : "\e[#{WE}C" + string.gsub(/\n/, "\n\e[#{WE}C")
+    WE == 0 ? string : "\e[#{WE}C" + string.gsub(/\n/, "\n\e[#{WE}C")
+  end
+
+  def self.write_options(options)
+    indentation = options == FINAL_OPTIONS ? '' : ' ' * 10
+    options.each do |option|
+      puts indentation + (option[5] == '⮕' ? ' ' * (59+WE) : ' ' * (60+WE)) +
+           option + "  \n\n"
+    end
+  end
+
+  def self.change_option(options, left_right=false)
+    options.each_with_index do |choice, idx|
+      next if choice[5] != '⮕'
+      easy_hard = options[idx][-2..-1]
+      if left_right
+        options[idx][-2..-1] = easy_hard == '🔰 ' ? '⚔️' : '🔰 '
+        break
+      end
+      other_idx = (idx-1).abs
+      options[idx] = options[idx][11..-3]
+      options[other_idx] = POINTER + options[other_idx] + easy_hard
+      break
+    end
   end
 
   def display(winer=nil)
@@ -69,7 +98,7 @@ module Displayable
       if show_current_land
         if @land_rows_num > 0 && row_element == 'empty land row'
           @land_rows_num -= 1
-          row_element = create_current_land_row.center(x_len*10+53)
+          row_element = create_current_land_row
         elsif row_element == 'empty land row'
           row_element = ' ' * 44
         end
@@ -112,25 +141,25 @@ module Displayable
         right_table_line = construct_table_line(right_pl, info, stub)
       end
     elsif line < 12
-      left_table_line = "\e[45m#{SPACE}" if @@p_info[1]
-      right_table_line = "\e[45m#{SPACE}" if @@p_info[2]
+      left_table_line = "\e[45m" + SPACE if @@p_info[1]
+      right_table_line = "\e[45m" + SPACE if @@p_info[2]
     elsif line.between?(17, 27)
-      left_table_line = "\e[45m#{SPACE}" if @@p_info[3]
-      right_table_line = "\e[45m#{SPACE}" if @@p_info[4]
+      left_table_line = "\e[45m" + SPACE if @@p_info[3]
+      right_table_line = "\e[45m" + SPACE if @@p_info[4]
     end
 
     left_table_line ||= SPACE
     right_table_line ||= SPACE
 
-    @@display_str << "#{left_table_line}\e[40m  \e[0m"
+    @@display_str << left_table_line + "\e[40m  \e[0m"
     @@map[line].each_with_index do |point, idx|
-      @@display_str << (idx > 0 ? "|#{point}" : point)
+      @@display_str << (idx > 0 ? '|' + point : point)
     end
     @@display_str << "\e[40m  \e[0m#{right_table_line}\e[0m\n"
   end
 
   def construct_table_line(player_side, info, stub)
-    if info.zero?
+    if info == 0
       if p_num == player_side
         color.call("\e[5m👉\e[25m#{name.center(14)}\e[5m👈")
       else @@p_info[player_side][0]
@@ -188,9 +217,9 @@ module Displayable
 
   def construct_right_buttons
     unavailable = "\e[45m" unless show_current_land
-    rtt_color = joker_num[0].zero? ? HID : "\e[36;107m#{unavailable}"
-    rrl_color = joker_num[1].zero? ? HID : unavailable
-    eat_color = joker_num[2].zero? ? HID : "\e[40m#{unavailable}"
+    rtt_color = joker_num[0] == 0 ? HID : "\e[36;107m#{unavailable}"
+    rrl_color = joker_num[1] == 0 ? HID : unavailable
+    eat_color = joker_num[2] == 0 ? HID : "\e[40m#{unavailable}"
     eat_color = "\e[45m" if GAME_HARD && round < 4
     active = @eater ? "\e[32m" : "\e[36m"
 
@@ -232,24 +261,25 @@ module Displayable
                  place_direction_point((x_len-1), 0)
                end
     cur_row << '| '
+    cur_row.center(41 + cur_row.size - x_len*4)
   end
 
   def place_direction_point(x, y)
-    return "|#{color.call}" if x_len == 1 && y_len == 1
+    return '|' + color.call if x_len == 1 && y_len == 1
     cur_row = +''
     x_len.times do |col|
       cur_row << if col == x && @land_rows_num == y
                    "|\e[40m___\e[49m"
-                 elsif col.zero? && @land_rows_num == (y_len-1)
-                   "|#{color.call('_1_')}"
+                 elsif col == 0 && @land_rows_num == (y_len-1)
+                   '|' + color.call('_̲1_')
                  elsif col == (x_len-1) && @land_rows_num == (y_len-1)
-                   "|#{color.call('_2_')}"
-                 elsif col.zero? && @land_rows_num.zero?
-                   "|#{color.call('_3_')}"
-                 elsif col == (x_len-1) && @land_rows_num.zero?
-                   "|#{color.call('_4_')}"
+                   '|' + color.call('_̲2_')
+                 elsif col == 0 && @land_rows_num == 0
+                   '|' + color.call('_̲3_')
+                 elsif col == (x_len-1) && @land_rows_num == 0
+                   '|' + color.call('_̲4_')
                  else
-                   "|#{color.call}"
+                   '|' + color.call
                  end
     end
     cur_row
@@ -263,6 +293,35 @@ module Displayable
     print "\e[#{36+NS}H\e[9#{p_num}m"
     8.times do |t|
       puts "\e[#{60+WE}C#{@@players_turn[0][t]}#{@@players_turn[p_num][t]}"
+    end
+  end
+
+  def final_choice
+    `pkill -9 -f 'paplay.*krage'`
+    spawn("paplay #{KRAGE_DIR}/data/king.ogg")
+    display('winer')
+    puts "\n\n\n"
+    puts "\e[3;9#{p_num}mWe have a Krage King, behold almighty "\
+         "#{name.upcase}!!!\e[0;1m\n\n".center(175+WE*2)
+    loop do
+      print `tput cup #{39+NS}`
+      Displayable.write_options(FINAL_OPTIONS)
+
+      key = `#{KRAGE_DIR}/ext/gen_keyboard`
+      case key
+      when ''
+        `pkill -f 'paplay.*king.ogg'`
+        if FINAL_OPTIONS[0][5] == '⮕'
+          `stty #{STTY_STATE}`
+          spawn("paplay --volume=0 #{KRAGE_DIR}/data/echo.ogg")
+          print "\ec"
+          exec("ruby #{KRAGE_DIR}/krage.rb")
+        elsif FINAL_OPTIONS[1][5] == '⮕'
+          exit
+        end
+      when "\e[A", "\e[B"
+        Displayable.change_option(FINAL_OPTIONS)
+      end
     end
   end
 
