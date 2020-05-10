@@ -1,25 +1,20 @@
 # frozen_string_literal: true
 
 sleep 0.05
-print "\e[?25l\e[?7l"
+MOUSE_SYSTEM = `xmodmap -pp | grep -Eo '[0-9]+$'`.gsub(/\n/, ' ')
+MOUSE_KRAGE = '3 0 0 0 0 0 0 0 0 0'
 SILENT = `ps x | grep '[p]aplay.*echo.ogg'`.empty?
 STTY_STATE = `stty -g`.freeze
 KRAGE_DIR = File.expand_path(__dir__)
 krage_win_active = !`xprop -name Krage 2> /dev/null`.empty? rescue true
-`stty -echo`
-
-at_exit do
-  `pkill -f 'paplay.*echo.ogg'` unless SILENT
-  `pkill -9 -f 'paplay.*krage'`
-  `reset` unless krage_win_active
-end
-
+abort('Run command `krage` or bin/krage') unless krage_win_active
 unless RUBY_VERSION.to_f > 2.4
-  print `tput cup 22 70` if krage_win_active
   STDERR.puts 'Require ruby > 2.4'
-  sleep 2 if krage_win_active
+  sleep 2
   exit 1
 end
+print "\e[?25l\e[?7l\e[?1000h"
+`stty -echo`
 
 $LOAD_PATH.unshift("#{KRAGE_DIR}/lib")
 require 'krage_class'
@@ -126,11 +121,14 @@ end
 players = [player1, player2, player3, player4].compact
 score = {}
 
-print "\e[?25l\e[?1000h"
+print "\e[?25l\e[?1004h"
 `stty -echo -icanon -icrnl`
 print "\n\n" * (4-players.size)
-print "\n#{space}\e[0mAlea iacta est"
+print "\n#{space}Alea iacta est"
 5.times { print '!'; sleep 0.2 }
+if STDIN.read_nonblock(50)[-1] != 'O'
+  spawn("xmodmap -e 'pointer = #{MOUSE_KRAGE}' 2> /dev/null")
+end
 
 players.cycle do |player|
   next unless player

@@ -41,7 +41,7 @@ class Krage
       when /[rqwesg]/ then click
       when /[1-4]/
         if show_current_land
-          spawn("paplay #{KRAGE_DIR}/data/direction.ogg")
+          spawn("paplay #{KRAGE_DIR}/data/direction.ogg 2> /dev/null")
           @fill_direction = click
         end
       end
@@ -66,6 +66,12 @@ class Krage
       end
       self.coords = x, y
       coords_to_button
+    elsif click.size == 3
+      wait_button_release
+      case click[2]
+      when 'I' then `xmodmap -e "pointer = #{MOUSE_KRAGE}" 2> /dev/null`
+      when 'O' then `xmodmap -e "pointer = #{MOUSE_SYSTEM}" 2> /dev/null`
+      end
     end
   end
 
@@ -177,6 +183,12 @@ class Krage
   end
 
   private
+
+  def wait_button_release
+    `xinput`.gsub(/.*id=(\d+).*slave.*pointer/) do
+      return wait_button_release if `xinput -query-state "#{$1}"` =~ /down/
+    end
+  end
 
   def get_map_coords(x, y)
     x -= 52
@@ -302,14 +314,20 @@ class Krage
         print "\e[?1003h"
         cursor = STDIN.getc
         print "\e[?1003l"
-        cursor = STDIN.read_nonblock(5) if cursor == "\e"
-        if cursor.size == 1
+        cursor = STDIN.read_nonblock(5) if cursor == "\e" rescue ''
+        if cursor =~ /\[[IO]/
+          wait_button_release
+          case cursor
+          when /\[O/ then `xmodmap -e "pointer = #{MOUSE_SYSTEM}" 2> /dev/null`
+          when /\[I/ then `xmodmap -e "pointer = #{MOUSE_KRAGE}" 2> /dev/null`
+          end
+        elsif cursor.size == 1
           cursor.downcase!
           case cursor
           when 's', 'g' then return cursor
           when /[qwe]/ then break jokers(cursor)
           when /[1-4]/
-            spawn("paplay #{KRAGE_DIR}/data/direction.ogg")
+            spawn("paplay #{KRAGE_DIR}/data/direction.ogg 2> /dev/null")
             break @fill_direction = cursor
           end
         elsif cursor.size == 5

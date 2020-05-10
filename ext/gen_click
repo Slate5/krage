@@ -1,21 +1,22 @@
 #!/bin/bash
 
 shopt -s nocasematch
-read -sn 10000 -t 0.1
 
 read -srn 1 input
 if [[ "$input" =~ ^[1-4rsgqwe]$ ]]; then
   echo -n "$input"
 elif [[ $(echo -e "$input" | od -t x | grep "1b") ]]; then
-  read -srt 0.001 input
-  if [[ "${input:2:1}" == "#" ]]; then
+  read -srt 0.0001 input
+  if [[ "${#input}" = 2 ]]; then
+    echo -n "A$input"
+  elif [[ "${input:2:1}" == "#" ]]; then
     echo -n "${input:3:2}"
-  elif [[ "${input:2:1}" == " " ]]; then
+  elif [[ "${input:2:1}" == '"' ]]; then
     read -srn 1 input
     if [[ "$input" =~ ^[1-4rsgqwe]$ ]]; then
       echo -n "$input"
     elif [[ $(echo -e "$input" | od -t x | grep "1b") ]]; then
-      read -srt 0.001 input
+      read -srt 0.0001 input
       echo -n "${input:(-2)}"
     fi
   fi

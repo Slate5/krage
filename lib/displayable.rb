@@ -4,19 +4,9 @@ require 'yaml'
 
 module Displayable
 
-  @@map = Array.new(30) { Array.new(30) { '___' } }
-
-  @@p_info = {}
-
-  @@music = @@sfx = SILENT ? false : true
-  @@music_icon = '⏸️ ' if SILENT
-  @@previous_music_status = false
-  @@show_turn = true
-  @@img_info = nil
-
-  STUBS = { 2 => "\e[95;45m Fields\e[37m\e]8;;More Info\e\\📖\e]8;;\e\\ ",
+  STUBS = { 2 => "\e[95;45m Fields\e[35m\e]8;;More Info\e\\📖\e]8;;\e\\\e[37m ",
             4 => "\e[95;45m Percent:\e[37m ",
-            6 => "\e[95;45m Jokers\e[37m\e]8;;More Info\e\\📖\e]8;;\e\\ ",
+            6 => "\e[95;45m Jokers\e[35m\e]8;;More Info\e\\📖\e]8;;\e\\\e[37m ",
             8 => "\e[95;45m  ROTATE\e[37m  ",
             9 => "\e[95;45m  REROLL\e[37m  ",
             10 => "\e[95;45m  EAT\e[37m     ",
@@ -24,23 +14,36 @@ module Displayable
             13 => "\e[95;45m Accuracy:\e[37m" }.freeze
 
   CHK_TIMER_STUBS = ->(n) { GAME_WITH_TIMER && [12, 13, 28, 29].include?(n) }
-
-  LOADING = %w(🕧 🕘 🕛 ⏸️\ ).freeze
   SPACE = ' ' * 18
   HID = "\e[8;0;8;1m"
+
+  LOADING = ["\e[36m\e]8;;Music On\e\\🕧\e]8;;\e\\",
+             "\e[36m\e]8;;Music On\e\\🕘\e]8;;\e\\",
+             "\e[36m\e]8;;Music On\e\\🕛\e]8;;\e\\",
+             "\e[36m\e]8;;Music On\e\\⏸️ \e]8;;\e\\"].freeze
+
+  @@map = Array.new(30) { Array.new(30) { '___' } }
+  @@music = @@sfx = SILENT ? false : true
+  @@music_icon = LOADING[3] if SILENT
+  @@previous_music_status = false
+  @@show_turn = true
+  @@img_info = nil
+  @@p_info = {}
 
   @@left_bird = YAML.load(File.read("#{KRAGE_DIR}/ext/left_bird.yaml"))
   @@right_bird = YAML.load(File.read("#{KRAGE_DIR}/ext/right_bird.yaml"))
   @@players_turn = YAML.load(File.read("#{KRAGE_DIR}/ext/players_turn.yaml"))
 
+  String.class_eval do
+    def indent
+      WE == 0 ? self : "\e[#{WE}C" + self.gsub(/\n/, "\n\e[#{WE}C")
+    end
+  end
+
   def self.intro
     print `clear; tput cup #{NS+1} #{WE}`
     puts 'Welcome to The Mighty Krage'.rjust(94)
-    print "\n\n\e[30m#{indent(CROW)}\e[0m\n\n"
-  end
-
-  def self.indent(string=@@display_str)
-    WE == 0 ? string : "\e[#{WE}C" + string.gsub(/\n/, "\n\e[#{WE}C")
+    print "\n\n\e[30m#{CROW.indent}\e[0m\n\n"
   end
 
   def self.write_options(options)
@@ -71,7 +74,7 @@ module Displayable
     @land_rows_num = y_len
     if @@music != @@previous_music_status
       @@previous_music_status = @@music
-      @@music_icon = @@music ? '🎶' : '🕒'
+      @@music_icon = @@music ? hover(36, 'Music Off', '🎶') : hover(36, 'Music On', '🕒')
       unless @@music
         Thread.new do
           LOADING.each do |icon|
@@ -82,14 +85,15 @@ module Displayable
         end
       end
     end
-    sfx_icon = @@sfx ? '🔊' : '🔇'
+    sfx_icon = @@sfx ? hover(36, 'SFX Off', '🔊') : hover(36, 'SFX On', '🔇')
+    close_sign = hover('40;30', 'Close', " ❌ \e[0m")
     map_border = "#{SPACE}\e[36;40m#{'KRAGE'.center(123)}\e[0m#{SPACE}\n"
-    @@display_str << "#{' '*147}#{sfx_icon}  #{@@music_icon}  \e[40m ❌ \e[0m\n"
+    @@display_str << "#{' '*147}#{sfx_icon}  #{@@music_icon}  #{close_sign}\n"
     @@display_str << map_border
     shovel_map_lines
     @@display_str << map_border
-    return (print `clear && tput cup #{NS}` + Displayable.indent) if winer
-    @@display_str << (GAME_WITH_TIMER ? display_timer : "\n")
+    return (print `clear && tput cup #{NS}` + @@display_str.indent) if winer
+    @@display_str << (GAME_WITH_TIMER ? display_timer : ' '*159 + "\n")
 
     console_rows = [@@left_bird, construct_left_buttons, prepare_console_center,
                     construct_right_buttons, @@right_bird].transpose.flatten
@@ -100,15 +104,19 @@ module Displayable
           @land_rows_num -= 1
           row_element = create_current_land_row
         elsif row_element == 'empty land row'
-          row_element = ' ' * 44
+          row_element = ' ' * 45
         end
       elsif row_element == 'empty land row'
-        row_element = ' ' * 44
+        row_element = ' ' * 45
       end
       @@display_str << row_element
     end
-    print `tput cup #{NS}` + Displayable.indent
+    print `tput cup #{NS}` + @@display_str.indent
     show_player_turn if @@show_turn
+  end
+
+  def hover(color, popup, txt)
+    "\e[#{color}m\e]8;;#{popup}\e\\#{txt}\e]8;;\e\\"
   end
 
   def shovel_map_lines
@@ -166,7 +174,7 @@ module Displayable
       end
     else
       reduce_ljust = case info
-                     when 1, 3 then 22
+                     when 1, 3 then 27
                      when 2 then -1
                      when 7, 8 then -@@p_info[player_side][info].size
                      else 0
@@ -188,63 +196,75 @@ module Displayable
       green -= 5
       red += 8
     end
-    timer_str << "\e[0m⌛\n"
+    timer_str << "\e[0m⌛#{' '*62}\n"
   end
 
   def construct_left_buttons
-    show_current_land ? unavailable1 = "\e[45m" : unavailable2 = "\e[45m"
     default_info = if round < 1
-                     'First roll will place a land in your corner'\
+                     'Roll will place a land in your quadrant'\
                      " of the map, ROLL #{color.call(name)}!"
                    elsif show_current_land
-                     "Now #{color.call(name)}, place your "\
-                     'land on the map or use joker if any!'
+                     "Now #{color.call(name)}, place your land"\
+                     " on the map or use joker if there's any!"
                    else
                      "It is your turn #{color.call(name)}, ROLL!"
                    end
 
-    ["#{unavailable1}|      |\e[0m|",
-     "#{unavailable1}| ROLL |\e[0m|",
-     "#{unavailable1}|      |\e[0m|",
-     "#{unavailable2}        \e[0m#{' '*11}",
-     "#{unavailable2}  SKIP  \e[0m#{' '*11}",
-     "#{unavailable2}        \e[0m#{' '*11}",
-     "#{unavailable2}        \e[0m#{' '*21}",
-     "#{unavailable2} GIVEUP \e[0m#{' '*21}",
-     "#{unavailable2}        \e[0m#{' '*85}",
-     "INFO: \e[37m#{@@img_info||default_info} \e[30m=".center(137, '=')]
+    if show_current_land
+      ["\e[45m        \e[0m",
+       "\e[45m  ROLL  \e[0m",
+       "\e[45m        \e[0m",
+       hover(33, 's', "        \e[0m") + ' '*10,
+       hover(33, 's', "  \e[36mSKIP\e[33m  \e[0m") + ' '*10,
+       hover(33, 's', "        \e[0m") + ' '*10,
+       hover(91, 'g', "        \e[0m") + ' '*20,
+       hover(91, 'g', " \e[36mGIVEUP\e[91m \e[0m") + ' '*20,
+       hover(91, 'g', "        \e[0m") + ' '*85,
+       "INFO: \e[37m#{@@img_info||default_info} \e[30m=".center(137, '=')]
+    else
+      [hover(32, 'r', "        \e[0m"),
+       hover(32, 'r', "  \e[36mROLL\e[32m  \e[0m"),
+       hover(32, 'r', "        \e[0m"),
+       "\e[45m        \e[0m#{' '*10}",
+       "\e[45m  SKIP  \e[0m#{' '*10}",
+       "\e[45m        \e[0m#{' '*10}",
+       "\e[45m        \e[0m#{' '*20}",
+       "\e[45m GIVEUP \e[0m#{' '*20}",
+       "\e[45m        \e[0m#{' '*85}",
+       "INFO: \e[37m#{@@img_info||default_info} \e[30m=".center(137, '=')]
+    end
   end
 
   def construct_right_buttons
-    unavailable = "\e[45m" unless show_current_land
-    rtt_color = joker_num[0] == 0 ? HID : "\e[36;107m#{unavailable}"
-    rrl_color = joker_num[1] == 0 ? HID : unavailable
-    eat_color = joker_num[2] == 0 ? HID : "\e[40m#{unavailable}"
-    eat_color = "\e[45m" if GAME_HARD && round < 4
+    unavailable = "\e[36;45m" unless show_current_land
+    rtt_off = joker_num[0] == 0 ? HID : unavailable
+    rrl_off = joker_num[1] == 0 ? HID : unavailable
+    eat_off = joker_num[2] == 0 ? HID : unavailable
+    eat_off = "\e[36;45m" if GAME_HARD && round < 4
     active = @eater ? "\e[32m" : "\e[36m"
 
-    ["#{rtt_color}        ",
-     "#{rtt_color} ROTATE ",
-     "#{rtt_color}        ",
-     "#{' '*10}\e[36;40m#{rrl_color} 🎲 ⥢ ⥤ ",
-     "#{' '*10}\e[36;47m#{rrl_color} 🎲 ⥣ ⥥ ",
-     "#{' '*10}\e[36;107m#{rrl_color} 🎲 ⥣ ⥤ ",
-     "#{' '*20}#{eat_color}        ",
-     "#{' '*20}#{active}#{eat_color}  EAT!  ",
-     "#{eat_color}        ", '']
+    [rtt_off ? rtt_off + '        ' : hover('97;107', 'q', '        '),
+     rtt_off ? rtt_off + ' ROTATE ' : hover('97;107', 'q', " \e[36mROTATE\e[97m "),
+     rtt_off ? rtt_off + '        ' : hover('97;107', 'q', '        '),
+     ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥢ ⥤ ' : hover('36;40', 'x', ' 🎲 ⥢ ⥤ ')),
+     ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥣ ⥥ ' : hover('36;47', 'y', ' 🎲 ⥣ ⥥ ')),
+     ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥣ ⥤ ' : hover('36;107', 'w', ' 🎲 ⥣ ⥤ ')),
+     ' '*20 + (eat_off ? eat_off + '        ' : hover('30;40', 'e', '        ')),
+     ' '*20 + (eat_off ? eat_off + '  EAT!  ' : hover('30;40', 'e', "  #{active}EAT!\e[30m  ")),
+     eat_off ? eat_off + '        ' : hover('30;40', 'e', '        '), '']
   end
 
   def prepare_console_center
     if show_current_land
-      column_nums = +"\e[37m"
+      column_nums = +" \e[37m"
       x_len.times { |num| column_nums << " #{num+1}  " }
-      column_nums = column_nums.center(49)
+      column_nums = column_nums.center(50)
     else
-      column_nums = ' ' * 44
+      column_nums = ' ' * 45
     end
     land_row = 'empty land row'
 
-    [' '*44, column_nums, land_row, land_row, land_row,
+    [' '*45, column_nums, land_row, land_row, land_row,
      land_row, land_row, land_row, '', '']
   end
 
@@ -261,7 +281,7 @@ module Displayable
                  place_direction_point((x_len-1), 0)
                end
     cur_row << '| '
-    cur_row.center(41 + cur_row.size - x_len*4)
+    cur_row.center(42 + cur_row.size - x_len*4)
   end
 
   def place_direction_point(x, y)

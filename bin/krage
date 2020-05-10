@@ -1,5 +1,6 @@
 #!/bin/bash
 
+pgrep -f 'krage.rb' &> /dev/null && echo 'Krage is already opened' >&2 && exit 1
 readonly krage_dir=$(readlink -fn /usr/local/games/krage | sed 's/bin\/krage//')
 [ "$1" != "-s" ] && paplay "$krage_dir"data/echo.ogg &
 
@@ -38,3 +39,11 @@ fi
 
 gnome-terminal -q --title=Krage --full-screen --zoom=1.0 --hide-menubar \
   --window-with-profile=krage -- ruby "$krage_dir"krage.rb
+
+(
+  mouse_system=$(xmodmap -pp | grep -Eo '[0-9]+$')
+  krage_pid=$(pgrep -f 'krage.rb')
+  while kill -0 "$krage_pid" &> /dev/null; do sleep 0.1; done
+  xmodmap -e "pointer = $mouse_system"
+  pkill -9 -f 'krage'
+) &
