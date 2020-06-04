@@ -1,10 +1,37 @@
 #!/bin/bash
 
-pgrep -f 'krage.rb' &> /dev/null && echo 'Krage is already opened' >&2 && exit 1
-readonly krage_dir=$(readlink -fn /usr/local/games/krage | sed 's/bin\/krage//')
+term_ver=$(gnome-terminal --version | sed -E 's/.*Terminal (([0-9]).{2}).*/\1/')
+if [[ "$XDG_SESSION_TYPE" != "x11" ]]; then
+	cat >&2 <<- EOF
+		To play Krage, you should use Xorg. Open custom.conf and uncomment
+		WaylandEnable=false. Depending on distro, custom.conf file should be
+		somewere in /etc e.g. Ubuntu: /etc/gdm3/, Fedora: /etc/gdm/.
+	EOF
+  exit 1
+elif (( $(echo "$term_ver < 3" | bc) )); then
+  echo 'GNOME Terminal version has to be at least 3.0' >&2
+  exit 65
+elif pgrep -f 'krage.rb' &> /dev/null; then
+  echo 'Krage is already opened' >&2
+  exit 114
+fi
+
+readonly krage_dir=$(readlink -n /usr/local/bin/krage | sed 's/bin\/krage//')
+[ -z "$krage_dir" ] && echo 'Install Krage using `rake`' >&2 && exit 1
+
+wait_button_release() {
+  for id in $(xinput | grep -o 'id.*slave.*pointer' | grep -Eo '[0-9]+'); do
+    if xinput -query-state "$id" | grep -q 'down'; then
+      wait_button_release
+      return
+    fi
+  done
+}
+
+exec &> /dev/null
 [ "$1" != "-s" ] && paplay "$krage_dir"data/echo.ogg &
 
-krage_chk=$(dconf dump /org/gnome/terminal/legacy/profiles:/ | grep 'krage')
+krage_chk=$(dconf dump /org/gnome/terminal/legacy/profiles:/ | grep 'Krage')
 
 if [ -z "$krage_chk" ]; then
   list_chk=$(dconf dump /org/gnome/terminal/legacy/profiles:/ | grep 'list')
@@ -38,12 +65,21 @@ if [ -z "$krage_chk" ]; then
 fi
 
 gnome-terminal -q --title=Krage --full-screen --zoom=1.0 --hide-menubar \
-  --window-with-profile=krage -- ruby "$krage_dir"krage.rb
+  --window-with-profile=Krage -- ruby "$krage_dir"krage.rb
 
 (
   mouse_system=$(xmodmap -pp | grep -Eo '[0-9]+$')
-  krage_pid=$(pgrep -f 'krage.rb')
-  while kill -0 "$krage_pid" &> /dev/null; do sleep 0.1; done
+  sleep 0.4
+  while read line; do
+    if grep -q '_NET_WM_STATE_FOCUSED' <<< "$line"; then
+      wait_button_release
+      xmodmap -e "pointer = 3 0 0 0 0 0 0 0 0 0"
+    elif grep -q '_NET_WM_STATE' <<< "$line"; then
+      wait_button_release
+      xmodmap -e "pointer = $mouse_system"
+    fi
+  done < <(xprop -name Krage -spy)
+  wait_button_release
   xmodmap -e "pointer = $mouse_system"
-  pkill -9 -f 'krage'
+  pkill -9 -f 'paplay.*krage'
 ) &

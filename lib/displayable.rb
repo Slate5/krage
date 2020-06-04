@@ -17,14 +17,14 @@ module Displayable
   SPACE = ' ' * 18
   HID = "\e[8;0;8;1m"
 
-  LOADING = ["\e[36m\e]8;;Music On\e\\🕧\e]8;;\e\\",
-             "\e[36m\e]8;;Music On\e\\🕘\e]8;;\e\\",
-             "\e[36m\e]8;;Music On\e\\🕛\e]8;;\e\\",
-             "\e[36m\e]8;;Music On\e\\⏸️ \e]8;;\e\\"].freeze
+  LOADING = ["\e[36m\e]8;;Play\e\\🕧\e]8;;\e\\",
+             "\e[36m\e]8;;Play\e\\🕘\e]8;;\e\\",
+             "\e[36m\e]8;;Play\e\\🕛\e]8;;\e\\",
+             "\e[36m\e]8;;Play\e\\⏸️ \e]8;;\e\\"].freeze
 
   @@map = Array.new(30) { Array.new(30) { '___' } }
-  @@music = @@sfx = SILENT ? false : true
-  @@music_icon = LOADING[3] if SILENT
+  @@music = @@sfx = SOUND_ON ? true : false
+  @@music_icon = "\e[36m\e]8;;Play\e\\⏹️ \e]8;;\e\\" unless SOUND_ON
   @@previous_music_status = false
   @@show_turn = true
   @@img_info = nil
@@ -74,13 +74,13 @@ module Displayable
     @land_rows_num = y_len
     if @@music != @@previous_music_status
       @@previous_music_status = @@music
-      @@music_icon = @@music ? hover(36, 'Music Off', '🎶') : hover(36, 'Music On', '🕒')
+      @@music_icon = @@music ? hover(36, 'Pause', '🎶') : hover(36, 'Play', '🕒')
       unless @@music
         Thread.new do
           LOADING.each do |icon|
-            4.times { sleep 0.128; Thread.exit if @@music }
+            4.times { sleep 0.128; Thread.exit if @@music_icon.match?(/[🎶⏹️]/) }
             @@music_icon = icon
-            print `tput cup #{NS} #{151+WE}` + icon
+            print `tput cup #{NS} #{151+WE}`, icon
           end
         end
       end
@@ -92,7 +92,7 @@ module Displayable
     @@display_str << map_border
     shovel_map_lines
     @@display_str << map_border
-    return (print `clear && tput cup #{NS}` + @@display_str.indent) if winer
+    return (print `clear && tput cup #{NS}`, @@display_str.indent) if winer
     @@display_str << (GAME_WITH_TIMER ? display_timer : ' '*159 + "\n")
 
     console_rows = [@@left_bird, construct_left_buttons, prepare_console_center,
@@ -111,7 +111,7 @@ module Displayable
       end
       @@display_str << row_element
     end
-    print `tput cup #{NS}` + @@display_str.indent
+    print `tput cup #{NS}`, @@display_str.indent
     show_player_turn if @@show_turn
   end
 
@@ -248,7 +248,7 @@ module Displayable
      rtt_off ? rtt_off + '        ' : hover('97;107', 'q', '        '),
      ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥢ ⥤ ' : hover('36;40', 'x', ' 🎲 ⥢ ⥤ ')),
      ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥣ ⥥ ' : hover('36;47', 'y', ' 🎲 ⥣ ⥥ ')),
-     ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥣ ⥤ ' : hover('36;107', 'w', ' 🎲 ⥣ ⥤ ')),
+     ' '*10 + (rrl_off ? rrl_off + ' 🎲 ⥥ ⥤ ' : hover('36;107', 'w', ' 🎲 ⥥ ⥤ ')),
      ' '*20 + (eat_off ? eat_off + '        ' : hover('30;40', 'e', '        ')),
      ' '*20 + (eat_off ? eat_off + '  EAT!  ' : hover('30;40', 'e', "  #{active}EAT!\e[30m  ")),
      eat_off ? eat_off + '        ' : hover('30;40', 'e', '        '), '']

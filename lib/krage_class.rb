@@ -13,8 +13,8 @@ class Krage
   attr_reader :name, :p_num, :round, :color, :x_len, :y_len
 
   def self.create_new_player
-    name = gets.chomp.gsub(/[\e\t]/, '')[0..13]
-    spawn("paplay #{KRAGE_DIR}/data/thunder.ogg") unless SILENT
+    name = gets.chomp.gsub(/[\P{ASCII}\e\t]/, '')[0..13]
+    spawn("paplay #{KRAGE_DIR}/data/thunder.ogg") if SOUND_ON
     name = 'Anonymous' if name.empty?
     Krage.new(name)
   end
@@ -36,9 +36,10 @@ class Krage
     click = `#{KRAGE_DIR}/ext/gen_click 2> /dev/null`
     if click.size == 1
       click.downcase!
-      @@img_info &&= nil if click =~ /(s|g)/
+      @@img_info &&= nil if click.match?(/[sg]/)
       case click
-      when /[rqwesg]/ then click
+      when /[qwerysgx]/ then click
+      when 'm' then stop_sounds
       when /[1-4]/
         if show_current_land
           spawn("paplay #{KRAGE_DIR}/data/direction.ogg 2> /dev/null")
@@ -53,8 +54,12 @@ class Krage
           exit
         elsif x.between?(184, 185)
           @@music = !@@music
-          if @@music then `pkill -CONT -f 'paplay.*krage_'`
-          else `pkill -STOP -f 'paplay.*krage_' &`
+          if system("ps x | grep -q '[p]aplay.*krage_' > /dev/null")
+            if @@music then `pkill -CONT -f 'paplay.*krage_'`
+            else `pkill -STOP -f 'paplay.*krage_' &`
+            end
+          else
+            Process.spawn("paplay #{KRAGE_DIR}/data/#{MUSIC[rand(4)]}")
           end
         elsif x.between?(180, 181)
           @@sfx = !@@sfx
@@ -66,12 +71,6 @@ class Krage
       end
       self.coords = x, y
       coords_to_button
-    elsif click.size == 3
-      wait_button_release
-      case click[2]
-      when 'I' then `xmodmap -e "pointer = #{MOUSE_KRAGE}" 2> /dev/null`
-      when 'O' then `xmodmap -e "pointer = #{MOUSE_SYSTEM}" 2> /dev/null`
-      end
     end
   end
 
@@ -131,18 +130,14 @@ class Krage
         @x_len, @y_len = y_len, x_len
         refresh_jokers(0)
       end
-    when 'w'
+    when /^[xyw]$/
       if joker_num[1] > 0
         spawn("paplay #{KRAGE_DIR}/data/reroll.ogg")
-        if coords&.at(1) == 70
-          @x_len = rand(1..6)
-        elsif coords&.at(1) == 71
-          @y_len = rand(1..6)
-        else
-          @x_len = rand(1..6)
-          @y_len = rand(1..6)
+        case joker
+        when 'x' then @x_len = rand(1..6)
+        when 'y' then @y_len = rand(1..6)
+        when 'w' then @x_len, @y_len = rand(1..6), rand(1..6)
         end
-        self.coords = nil
         refresh_jokers(1)
       end
     when 'e'
@@ -184,12 +179,6 @@ class Krage
 
   private
 
-  def wait_button_release
-    `xinput`.gsub(/.*id=(\d+).*slave.*pointer/) do
-      return wait_button_release if `xinput -query-state "#{$1}"` =~ /down/
-    end
-  end
-
   def get_map_coords(x, y)
     x -= 52
     x = x % 4 == 0 ? x / 4 - 1 : x / 4
@@ -203,7 +192,11 @@ class Krage
     elsif valid_button_params?(135, 67)
       'q'
     elsif valid_button_params?(145, 70)
-      'w'
+      case coords[1]
+      when 70 then 'x'
+      when 71 then 'y'
+      when 72 then 'w'
+      end
     elsif valid_button_params?(155, 73)
       'e'
     elsif round > 0 && (@@img_info = click_on_img)
@@ -229,10 +222,10 @@ class Krage
       row_col = "#{33+NS} #{64+WE}"
       until countdown.size > 30
         break unless show_current_land
-        print `tput cup #{row_col}` + countdown
+        print `tput cup #{row_col}`, countdown
       end
       Thread.kill(counter)
-      if show_current_land then print `tput cup #{row_col}` + countdown
+      if show_current_land then print `tput cup #{row_col}`, countdown
       elsif !countdown.empty? then @countdown = ''
       end
       `pkill -f 'paplay.*countdown'`
@@ -315,17 +308,12 @@ class Krage
         cursor = STDIN.getc
         print "\e[?1003l"
         cursor = STDIN.read_nonblock(5) if cursor == "\e" rescue ''
-        if cursor =~ /\[[IO]/
-          wait_button_release
-          case cursor
-          when /\[O/ then `xmodmap -e "pointer = #{MOUSE_SYSTEM}" 2> /dev/null`
-          when /\[I/ then `xmodmap -e "pointer = #{MOUSE_KRAGE}" 2> /dev/null`
-          end
-        elsif cursor.size == 1
+        if cursor.size == 1
           cursor.downcase!
           case cursor
           when 's', 'g' then return cursor
-          when /[qwe]/ then break jokers(cursor)
+          when /[qweyx]/ then break jokers(cursor)
+          when 'm' then break stop_sounds
           when /[1-4]/
             spawn("paplay #{KRAGE_DIR}/data/direction.ogg 2> /dev/null")
             break @fill_direction = cursor
@@ -350,6 +338,23 @@ class Krage
     @@p_info[p_num][3] = joker_num.sum.to_s
     joker_num.each_with_index do |joker, idx|
       @@p_info[p_num][4+idx].sub!(/\d+/, joker.to_s)
+    end
+  end
+
+  def stop_sounds
+    if @@music_icon =~ /[⏸️⏹️]/ && !@@sfx
+      if system("ps x | grep -q '[p]aplay.*krage_' > /dev/null")
+        `pkill -CONT -f 'paplay.*krage_'`
+      else
+        Process.spawn("paplay #{KRAGE_DIR}/data/#{MUSIC[rand(4)]}")
+      end
+      @@music = @@sfx = true
+    else
+      if $& != '⏸'
+        `pkill -9 -f 'paplay.*krage'`
+        @@music_icon = hover(36, 'Play', '⏹️ ')
+      end
+      @@music = @@sfx = @@previous_music_status = false
     end
   end
 
@@ -407,7 +412,7 @@ class Krage
   def clear_invalid_land
     @@map.each do |row|
       row.map! do |point|
-        point =~ /(X|✔)/ ? '___' : point
+        point.match?(/(X|✔)/) ? '___' : point
       end
     end
   end

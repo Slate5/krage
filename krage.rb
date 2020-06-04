@@ -1,18 +1,17 @@
 # frozen_string_literal: true
 
-sleep 0.05
-MOUSE_SYSTEM = `xmodmap -pp | grep -Eo '[0-9]+$'`.gsub(/\n/, ' ')
-MOUSE_KRAGE = '3 0 0 0 0 0 0 0 0 0'
-SILENT = `ps x | grep '[p]aplay.*echo.ogg'`.empty?
+SOUND_ON = system("ps x | grep -q '[p]aplay.*echo.ogg' > /dev/null")
 STTY_STATE = `stty -g`.freeze
 KRAGE_DIR = File.expand_path(__dir__)
-krage_win_active = !`xprop -name Krage 2> /dev/null`.empty? rescue true
-abort('Run command `krage` or bin/krage') unless krage_win_active
 unless RUBY_VERSION.to_f > 2.4
   STDERR.puts 'Require ruby > 2.4'
   sleep 2
   exit 1
 end
+unless system("ps x | grep '[/]usr/local/bin/krage' > /dev/null")
+  abort('Run command `krage` if the game is installed')
+end
+trap('SIGINT') { `pkill -9 -f 'paplay.*krage'`; exit }
 print "\e[?25l\e[?7l\e[?1000h"
 `stty -echo`
 
@@ -24,15 +23,15 @@ POINTER = "\e[33m⮕\e[0m "
 FINAL_OPTIONS = ["#{POINTER}Courageous enough for one more challenge  ",
                  'I have had enough of this silly game']
 game_options = [+"#{POINTER}Krage For Softies 🔰 ", 'Krage Under Pressure ']
-music = ['krage_slavic.ogg', 'krage_western.ogg',
-         'krage_viking.ogg', 'krage_indigenous.ogg']
+MUSIC = ['krage_slavic.ogg', 'krage_western.ogg',
+         'krage_viking.ogg', 'krage_indigenous.ogg'].freeze
 
 krage_profile_id = File.read("#{KRAGE_DIR}/ext/.current_krage_id")
 font = `dconf read /org/gnome/terminal/legacy/profiles:/:#{krage_profile_id}/font\
         | grep -Eo "[0-9]+\.?[0-9]*"`.to_f
 curr_rows_cols = File.read("#{KRAGE_DIR}/ext/.current_rows_columns") rescue ''
 
-if krage_win_active && curr_rows_cols != `stty size`
+if curr_rows_cols != `stty size`
   begin
     sleep 0.05
     rows, columns = `stty size`.split(' ').map(&:to_i)
@@ -52,16 +51,17 @@ if krage_win_active && curr_rows_cols != `stty size`
 end
 
 rows, columns = `stty size`.split(' ').map(&:to_i)
-NS = krage_win_active ? (rows-44) / 2 : 0
-WE = krage_win_active ? (columns-159) / 2 : 0
+NS = (rows-44) / 2
+WE = (columns-159) / 2
 
-spawn("paplay #{KRAGE_DIR}/data/welcome.ogg") unless SILENT
-spawn("paplay #{KRAGE_DIR}/data/#{music[rand(4)]}")
-`pkill -STOP -f 'paplay.*krage_' &` if SILENT
+if SOUND_ON
+  spawn("paplay #{KRAGE_DIR}/data/welcome.ogg")
+  spawn("paplay #{KRAGE_DIR}/data/#{MUSIC[rand(4)]}")
+end
 
 Displayable.intro
 loop do
-  print `tput cup #{32+NS} #{60+WE}` + "What type of challenge do you seek?(⇵|⇆)\n\n"
+  print `tput cup #{32+NS} #{60+WE}`, "What type of challenge do you seek?(⇵|⇆)\n\n"
   Displayable.write_options(game_options)
   puts "\n\n"
   puts "Aren't you ready for the challenge? Press CTRL+C to exit".rjust(108+WE)
@@ -88,7 +88,7 @@ print "\e[?25hHow many brave souls will participate?(2-4) ".rjust(108+WE)
 
 while num_players ||= `#{KRAGE_DIR}/ext/gen_keyboard`.to_i
   if num_players.between?(2, 4)
-    print `tput cup #{32+NS} #{102+WE}` + num_players.to_s
+    print `tput cup #{32+NS} #{102+WE}`, num_players.to_s
     confirm = `#{KRAGE_DIR}/ext/gen_keyboard`
     if confirm == ''
       `stty echo`
@@ -121,14 +121,10 @@ end
 players = [player1, player2, player3, player4].compact
 score = {}
 
-print "\e[?25l\e[?1004h"
 `stty -echo -icanon -icrnl`
 print "\n\n" * (4-players.size)
-print "\n#{space}Alea iacta est"
+print "\e[?25l\n#{space}Alea iacta est"
 5.times { print '!'; sleep 0.2 }
-if STDIN.read_nonblock(50)[-1] != 'O'
-  spawn("xmodmap -e 'pointer = #{MOUSE_KRAGE}' 2> /dev/null")
-end
 
 players.cycle do |player|
   next unless player
@@ -139,9 +135,9 @@ players.cycle do |player|
     case button ||= player.generate_coords
     when Array
       button = player.choose_place
-      button.to_s =~ /^[sg]$/ ? redo : break if button
-    when /[1-4qwe]/
-      player.jokers(button) if button =~ /[qwe]/
+      button.to_s.match?(/^[sg]$/) ? redo : break if button
+    when /^[qweyx]$/
+      player.jokers(button)
     when 's'
       break player.spawn("paplay #{KRAGE_DIR}/data/skip.ogg")
     when 'g'

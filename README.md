@@ -6,7 +6,8 @@ Krage is a terminal-based game for 2-4 players. Each player puts a piece of land
 
 ## Installation
 
-The game works on Ubuntu 18 or later versions, Ruby > 2.4 (Ruby from snap on Ubuntu 19.10 has permission issue, so please use RVM, apt, etc. or run `krage -s` to avoid error messages):
+The game works on GNOME Terminal v3.0 or later and Ruby > 2.4 (tested on Ubuntu and Fedora)\
+Ruby from snap on Ubuntu version 19.10 or later has permission issue (PulseAudio), so please use Ruby from RVM, APT, DNF, etc. or run silent game `krage -s` to avoid error messages:
 ```
 git clone https://github.com/Slate5/krage.git
 cd krage && rake
@@ -31,6 +32,7 @@ From Krage directory: `rake uninstall && cd`
 - [x] 📖 - Jokers: how many fields you have to conquer to gain bonus joker
 - [x] ⏳ - earn this by being fast and get extra joker (5 needed)
 - [x] 🎯 - try to place land on the map without mistake to gain these (5 needed for a joker)
+- [x] 🎶 - Note: this button pauses the music contrary to key <kbd>m</kbd> which stops it
 - [ ] 📶 - play over the internet
 
 ## Keyboard instruction
@@ -41,9 +43,12 @@ From Krage directory: `rake uninstall && cd`
 |<kbd>s</kbd>| SKIP|
 |<kbd>g</kbd>| GIVEUP|
 |<kbd>q</kbd>| ROTATE|
-|<kbd>w</kbd>| REROLL|
+|<kbd>x</kbd>| REROLL ⥢ ⥤|
+|<kbd>y</kbd>| REROLL ⥣ ⥥|
+|<kbd>w</kbd>| REROLL ⥥ ⥤|
 |<kbd>e</kbd>| EAT|
-|<kbd>1</kbd>| Direction 1|
-|<kbd>2</kbd>| Direction 2|
-|<kbd>3</kbd>| Direction 3|
-|<kbd>4</kbd>| Direction 4|
+|<kbd>m</kbd>| Stop/Play Sounds|
+|<kbd>1</kbd>| Fill Direction 1|
+|<kbd>2</kbd>| Fill Direction 2|
+|<kbd>3</kbd>| Fill Direction 3|
+|<kbd>4</kbd>| Fill Direction 4|
