@@ -4,6 +4,10 @@ task default: [:install]
 
 task :configure do
   puts 'Configuring...'
+  unless system('which dconf >/dev/null 2>&1')
+    puts "\e[31mInstall `dconf` before installing `krage`\e[39m"
+    exit 1
+  end
   home = `echo -n $HOME`
   @krage_dir = File.expand_path(__dir__)
   @app_icon_dir = "#{home}/.local/share/icons/"
@@ -15,7 +19,7 @@ end
 task :clean => [:configure] do
   puts 'Cleaning...'
   old_krage_path = `readlink -fn /usr/local/bin/krage`.sub(/\/bin\/krage/, '')
-  unless ['', '/usr/local/bin/krage', @krage_dir].any?(old_krage_path)
+  unless ['', '/usr/local', @krage_dir].any?(old_krage_path)
     puts "\e[4mRemoving previous Krage installation\e[24m: "
     Dir.chdir(old_krage_path) do
       system('rake uninstall')

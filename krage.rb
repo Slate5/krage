@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-SOUND_ON = system("ps x | grep -q '[p]aplay.*echo.ogg' > /dev/null")
+SOUND_ON = system("ps x | grep -q '[p]aplay.*echo.ogg'")
 STTY_STATE = `stty -g`.freeze
 KRAGE_DIR = File.expand_path(__dir__)
 unless RUBY_VERSION.to_f > 2.4
@@ -8,7 +8,7 @@ unless RUBY_VERSION.to_f > 2.4
   sleep 2
   exit 1
 end
-unless system("ps x | grep '[/]usr/local/bin/krage' > /dev/null")
+unless system("ps x | grep -q '[/]usr/local/bin/krage'")
   abort('Run command `krage` if the game is installed')
 end
 trap('SIGINT') { `pkill -9 -f 'paplay.*krage'`; exit }
@@ -44,7 +44,7 @@ if curr_rows_cols != `stty size`
     end
     font_status ||= status_change
     `dconf write /org/gnome/terminal/legacy/profiles:/:#{krage_profile_id}/font\
-     "'Monospace Bold #{font}'"`
+     "'DejaVu Sans Mono Bold #{font}'"`
   end while font_status == status_change
   sleep 0.05
   `stty size > #{KRAGE_DIR}/ext/.current_rows_columns`

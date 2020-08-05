@@ -7,7 +7,6 @@ Krage is a terminal-based game for 2-4 players. Each player puts a piece of land
 ## Installation
 
 The game works on GNOME Terminal v3.0 or later and Ruby > 2.4 (tested on Ubuntu and Fedora)\
-Ruby from snap on Ubuntu version 19.10 or later has permission issue (PulseAudio), so please use Ruby from RVM, APT, DNF, etc. or run silent game `krage -s` to avoid error messages:
 ```
 git clone https://github.com/Slate5/krage.git
 cd krage && rake
